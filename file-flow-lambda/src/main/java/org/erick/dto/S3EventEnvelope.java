@@ -1,4 +1,4 @@
-package dto;
+package org.erick.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 

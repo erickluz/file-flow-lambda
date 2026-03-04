@@ -1,20 +1,19 @@
-package org.erick;
+package org.erick.handler;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
+
+import org.erick.dto.S3EventEnvelope;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.LambdaLogger;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import dto.S3EventEnvelope;
+import domain.JobDocument;
 
 public class SQSHandler implements RequestHandler<SQSEvent, Void> {
 
@@ -46,6 +45,10 @@ public class SQSHandler implements RequestHandler<SQSEvent, Void> {
                         Integer idJob = null;
                         Integer idDocument = null;
                         validaKey(key, idJob, idDocument);
+                        JobDocument jobDocument = buscarDocumento(idDocument);
+                        processarStatusDocumento(conn, jobDocumento);
+
+
                         alteraStatusJob(conn);
 
                     } catch (SQLException e) {
