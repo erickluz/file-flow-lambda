@@ -1,0 +1,28 @@
+# Build artifacts
+file-flow-lambda/target/
+
+# Maven wrapper cache (if added later)
+.mvn/wrapper/maven-wrapper.jar
+
+# IDE and editor
+.vscode/
+.idea/
+*.iml
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Environment/local secrets
+.env
+.env.*
+*.local
+
+# Java compiled files and archives (safety net)
+*.class
+*.jar
+*.war
+*.ear
