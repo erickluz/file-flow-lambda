@@ -1,6 +1,8 @@
 package org.erick.service;
 
 import java.sql.SQLException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 import org.erick.dao.JobDocumentDAO;
@@ -65,17 +67,6 @@ public class JobService {
         if (jobDocumento != null) {
             jobDocumentDAO.atualizarDocumentoComFalha(jobDocumento.id(), errorMessage);
         }
-    }
-
-    private void putJson(String key, String json) {
-        s3.putObject(
-            PutObjectRequest.builder()
-                .bucket(bucket)
-                .key(key)
-                .contentType("application/json")
-                .build(),
-            RequestBody.fromString(json)
-        );
     }
 
     public HeadObjectResponse obterArquivoS3(String key) {
@@ -174,8 +165,54 @@ public class JobService {
         }
     }
 
-    public void criarArquivoResultadoS3(String key, JobDocument jobDocumento) {
-        
+    public void criarArquivoResultadoS3(Long jobId, String bucket, JobDocument jobDocumento) {
+        putJson("processed/" + jobId + "/" + jobDocumento.id() + "result.json", arquivoResultadoJson(jobId, bucket, jobDocumento));
+    }
+
+    private String arquivoResultadoJson(Long jobId, String bucket, JobDocument jobDocumento) {
+        return """
+            {
+                "jobId": %d,
+                "documentId": %d,
+                "raw":{
+                    "bucket":"%s",
+                    "key":"%s",
+                    "originalFilename":"%s",
+                    "contentType":"%s",
+                    "sizeBytes": %d,
+                    "etag":"%s",
+                    "uploadedAt":"%s"
+                },
+                "processing":{
+                    "processor":"lambda-docproc-v1",
+                    "processedAt":"%s",
+                    "status":"%s"
+                }
+            }
+            """.formatted(
+            jobId,
+            jobDocumento.id(),
+            bucket,
+            jobDocumento.rawKey(),
+            jobDocumento.originalFilename(),
+            jobDocumento.contentType(),
+            jobDocumento.sizeBytes(),
+            jobDocumento.eTag(),
+            jobDocumento.updatedAt().format(DateTimeFormatter.ISO_DATE_TIME),
+            LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME),
+            "DONE"
+        );
+    }
+
+    private void putJson(String key, String json) {
+        s3.putObject(
+            PutObjectRequest.builder()
+                .bucket(bucket)
+                .key(key)
+                .contentType("application/json")
+                .build(),
+            RequestBody.fromString(json)
+        );
     }
 
 }

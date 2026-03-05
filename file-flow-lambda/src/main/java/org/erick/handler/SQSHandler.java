@@ -38,7 +38,7 @@ public class SQSHandler implements RequestHandler<SQSEvent, Void> {
                     jobDocumento = jobService.buscarDocumento(idDocument);
                     jobService.verificarStatusDocumento(jobDocumento);
                     jobService.verificarArquivoS3(arquivoS3, jobDocumento);
-                    jobService.criarArquivoResultadoS3(key, jobDocumento);
+                    jobService.criarArquivoResultadoS3(idJob, bucketName, jobDocumento);
                     jobService.atualizarDocumento(jobDocumento, 
                                                   arquivoS3.contentLength(), 
                                                   arquivoS3.contentType(), 
