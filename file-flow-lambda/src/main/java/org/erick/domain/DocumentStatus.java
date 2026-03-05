@@ -1,4 +1,4 @@
-package domain;
+package org.erick.domain;
 
 public enum DocumentStatus {
     READY_FOR_UPLOAD(1, "Ready for upload"),

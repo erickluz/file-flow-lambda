@@ -1,4 +1,4 @@
-package domain;
+package org.erick.domain;
 
 import java.time.LocalDateTime;
 
