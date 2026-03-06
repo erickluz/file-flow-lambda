@@ -8,11 +8,11 @@ public final class SQLConnection {
 
     private Connection connection;
 
-    private String host = env("DB_HOST");
+    private String host = envOr("DB_HOST", "localhost");
     private int port = Integer.parseInt(envOr("DB_PORT", "5432"));
-    private String db   = env("DB_NAME");
-    private String user = env("DB_USER");
-    private String pass = env("DB_PASSWORD");
+    private String db   = envOr("DB_NAME", "fileflow");
+    private String user = envOr("DB_USER", "postgres");
+    private String pass = envOr("DB_PASSWORD", "postgres");
 
     public Connection getConnection() throws SQLException {
         if (connection == null || connection.isClosed()) {
@@ -20,12 +20,6 @@ public final class SQLConnection {
             connection = DriverManager.getConnection(url, user, pass);
         }
         return connection;
-    }
-    
-    private static String env(String key) {
-        String v = System.getenv(key);
-        if (v == null || v.isBlank()) throw new IllegalStateException("Missing env: " + key);
-        return v;
     }
 
     private static String envOr(String key, String def) {

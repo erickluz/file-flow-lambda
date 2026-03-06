@@ -11,6 +11,7 @@ import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 
 import java.sql.SQLException;
 
+import org.erick.dao.JobDocumentDAO;
 import org.erick.domain.JobDocument;
 
 
@@ -23,9 +24,12 @@ public class SQSHandler implements RequestHandler<SQSEvent, Void> {
         LambdaLogger logger = context.getLogger();
         JobDocument jobDocumento = null;
         try {
-            jobService = new JobService();
+            jobService = new JobService(new JobDocumentDAO());
             for(var s3Envelope : jobService.obterEventos(event, logger)) {
                 for (var record : s3Envelope.Records()) {
+
+                    logger.log(s3Envelope.toString() + "\n");
+
                     String bucketName = record.s3().bucket().name();
                     String key = record.s3().object().key();
 
@@ -33,9 +37,10 @@ public class SQSHandler implements RequestHandler<SQSEvent, Void> {
 
                     jobService.validarEventoS3(bucketName, key);
                     Long idJob = jobService.extrairIdJob(key);
-                    Long idDocument = jobService.extrairIdDocument(key);
+                    Long UUIDDocument = jobService.extrairUUIDDocument(key);
 
-                    jobDocumento = jobService.buscarDocumento(idDocument);
+                    jobDocumento = jobService.buscarDocumento(UUIDDocument);
+                    logger.log("Documento encontrado: " + jobDocumento + "\n");
                     jobService.verificarStatusDocumento(jobDocumento);
                     jobService.verificarArquivoS3(arquivoS3, jobDocumento);
                     jobService.criarArquivoResultadoS3(idJob, bucketName, jobDocumento);
@@ -50,8 +55,8 @@ public class SQSHandler implements RequestHandler<SQSEvent, Void> {
         } catch (SQLException e) {
             logger.log("Erro de SQL: " + e.getMessage() + "\n");
         } catch (Throwable e) {
+            logger.log("Erro ao processar lambda: " + e.getStackTrace() + "\n");
             jobService.atualizarDocumentoComFalha(jobDocumento, e.getMessage());
-            logger.log("Erro ao processar lambda: " + e.getMessage() + "\n");
         }
         
         return null;

@@ -15,4 +15,25 @@ public record JobDocument(
      String errorMessage,
      LocalDateTime createdAt,
      LocalDateTime updatedAt
-) {}
+) {
+     public String toString() {
+          return """
+               JobDocument{
+                    id=%d,
+                    documentUUID=%d,
+                    status=%s,
+                    originalFilename=%s,
+                    contentType=%s,
+                    rawKey=%s,
+                    resultKey=%s,
+                    sizeBytes=%d,
+                    eTag=%s,
+                    errorMessage=%s,
+                    createdAt=%s,
+                    updatedAt=%s
+               }
+               """.formatted(
+                    id, documentUUID, status, originalFilename, contentType, rawKey, resultKey, sizeBytes, eTag, errorMessage, createdAt, updatedAt
+               );
+     }
+}

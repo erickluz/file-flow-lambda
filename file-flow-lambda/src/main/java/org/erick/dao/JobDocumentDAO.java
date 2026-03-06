@@ -4,6 +4,8 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
 
 import org.erick.domain.DocumentStatus;
 import org.erick.domain.JobDocument;
@@ -17,16 +19,27 @@ public class JobDocumentDAO {
         this.sqlConnection = new SQLConnection().getConnection();
     }
 
-    public JobDocument buscarDocumento(Long idDocument) throws SQLException {
-        String sql = "SELECT * FROM documents WHERE document_id = ?";
+    public JobDocument buscarDocumento(Long UUIDDocument) throws SQLException {
+        String sql = "SELECT * FROM job_document WHERE documentuuid = ?";
 
         PreparedStatement ps = sqlConnection.prepareStatement(sql);
-        ps.setLong(1, idDocument);
+        ps.setLong(1, UUIDDocument);
 
-        ResultSet rs = ps.getResultSet();
-        JobDocument jobDocument= null;
-        while (rs.next()) {
-            jobDocument = new JobDocument(
+        ResultSet rs = ps.executeQuery();
+
+        if (!rs.next()) return null;
+        LocalDateTime lCreatedAt = null;
+        Timestamp createdAt = rs.getTimestamp("CREATED_AT");
+        if (createdAt != null) {
+            lCreatedAt = createdAt.toLocalDateTime();
+        }
+        LocalDateTime lUpdatedAt = null;
+        Timestamp updatedAt = rs.getTimestamp("UPDATED_AT");
+        if (updatedAt != null) {
+            lUpdatedAt  = updatedAt.toLocalDateTime();
+        }
+
+        return new JobDocument(
                 rs.getLong("ID"),
                 rs.getLong("DOCUMENTUUID"),
                 DocumentStatus.valueOf(rs.getInt("STATUS")),
@@ -37,18 +50,16 @@ public class JobDocumentDAO {
                 rs.getLong("SIZE_BYTES"),
                 rs.getString("E_TAG"),
                 rs.getString("ERROR_MESSAGE"),
-                rs.getTimestamp("CREATED_AT").toLocalDateTime(),
-                rs.getTimestamp("UPDATED_AT").toLocalDateTime()
-            );
-        }
-        return jobDocument;
+                lCreatedAt,
+                lUpdatedAt
+        );
     }
 
     public void atualizarDocumento(JobDocument jobDocumento, Long contentLength, String contetType, String eTag, long sizeBytes) {
         String sql = """
-            update documents
+            update job_document
             set status = ?, size_bytes = ?, content_type = ?, e_tag = ?, updated_at = now()
-            where document_id = ?
+            where id = ?
             """;
 
         PreparedStatement ps;
@@ -67,9 +78,9 @@ public class JobDocumentDAO {
 
     public void atualizarDocumentoComFalha(Long id, String errorMessage) {
         String sql = """
-            update documents
+            update job_document
             set status = ?, error_message = ?, updated_at = now()
-            where document_id = ?
+            where id = ?
             """;
 
         PreparedStatement ps;

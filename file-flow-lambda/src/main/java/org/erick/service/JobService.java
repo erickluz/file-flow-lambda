@@ -1,5 +1,7 @@
 package org.erick.service;
 
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -26,16 +28,16 @@ public class JobService {
     private static final int TAMANHO_MAXIMO = 20 * 1024 * 1024;
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
-    private String region = System.getenv("AWS_REGION");
+    private String region = envOr("APP_REGION", "us-west-2");
     private S3Client s3 = obterS3Client();
     private String bucket = System.getenv("S3_BUCKET");
 
     private JobDocumentDAO jobDocumentDAO;
 
-    public JobService() throws SQLException {
-        this.jobDocumentDAO = new JobDocumentDAO();
+    public JobService(JobDocumentDAO jobDocumentDAO) throws SQLException {
+        this.jobDocumentDAO = jobDocumentDAO;
     }
-
+    
     public void verificarArquivoS3(HeadObjectResponse arquivoS3, JobDocument jobDocumento) {
         if (arquivoS3 == null) {
             throw new RuntimeException("Arquivo não encontrado no S3: ");
@@ -52,7 +54,7 @@ public class JobService {
         if (jobDocumento == null) {
             throw new RuntimeException("Documento não encontrado");
         }
-        if (jobDocumento.status() != DocumentStatus.DONE) {
+        if (jobDocumento.status() == DocumentStatus.DONE) {
             throw new RuntimeException("Documento já processado");
         }
         if (jobDocumento.status() == DocumentStatus.PROCESSING) {
@@ -94,6 +96,7 @@ public class JobService {
     }
 
     private void validarKey(String key) {
+        String k2 = normalizarKey(key);
         String [] partes = key.split("/");
         if (partes.length != 4) {
             throw new IllegalArgumentException("Formato da chave inválido: " + key);
@@ -101,7 +104,7 @@ public class JobService {
         if (partes[0].isBlank() || partes[1].isBlank() || partes[2].isBlank()) {
             throw new IllegalArgumentException("Chave inválida: " + key);
         }
-        if (partes[0] != "raw") {
+        if (!"raw".equals(partes[0])) {
             throw new IllegalArgumentException("Chave inválida: " + key);
         }
         try{
@@ -114,6 +117,14 @@ public class JobService {
         } catch (Exception e) {
             throw new IllegalArgumentException("Chave inválida: " + key);
         }
+    }
+
+    private String normalizarKey(String key) {
+        if (key == null) return null;
+        String k = key.strip(); // tira \n, espaços etc
+        k = URLDecoder.decode(k, StandardCharsets.UTF_8);
+        if (k.startsWith("/")) k = k.substring(1); // evita /raw/...
+        return k;
     }
 
     public List<S3EventEnvelope> obterEventos(SQSEvent event, LambdaLogger logger) {
@@ -140,15 +151,15 @@ public class JobService {
         return Long.parseLong(partes[1]);
     }
 
-	public Long extrairIdDocument(String key) {
+	public Long extrairUUIDDocument(String key) {
 		String [] partes = key.split("/");
 		return Long.parseLong(partes[2]);
 	}
 	
-    public JobDocument buscarDocumento(Long idDocument) throws SQLException {
-        JobDocument jobDocument = jobDocumentDAO.buscarDocumento(idDocument);
+    public JobDocument buscarDocumento(Long UUIDDocument) throws SQLException {
+        JobDocument jobDocument = jobDocumentDAO.buscarDocumento(UUIDDocument);
         if (jobDocument == null) {
-            throw new RuntimeException("Documento não encontrado: " + idDocument);
+            throw new RuntimeException("Documento não encontrado: " + UUIDDocument);
         }
         return jobDocument;
     }
@@ -215,4 +226,10 @@ public class JobService {
         );
     }
 
+    private static String envOr(String key, String def) {
+        String v = System.getenv(key);
+        return (v == null || v.isBlank()) ? def : v;
+    }
+
 }
+

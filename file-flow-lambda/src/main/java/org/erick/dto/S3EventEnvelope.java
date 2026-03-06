@@ -16,4 +16,8 @@ public record S3EventEnvelope(java.util.List<S3Record> Records) {
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record S3Object(String key, Long size) {}
+
+    public String toString() {
+        return "S3EventEnvelope{Records=" + Records + "}";
+    }
 }

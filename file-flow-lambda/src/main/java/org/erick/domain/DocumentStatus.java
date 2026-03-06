@@ -1,11 +1,11 @@
 package org.erick.domain;
 
 public enum DocumentStatus {
-    READY_FOR_UPLOAD(1, "Ready for upload"),
-    UPLOADED(2, "Uploaded"),
-    PROCESSING(3, "Processing"),
-    DONE(4, "Done"),
-    FAILED(5, "Failed");
+    READY_FOR_UPLOAD(0, "Ready for upload"),
+    UPLOADED(1, "Uploaded"),
+    PROCESSING(2, "Processing"),
+    DONE(3, "Done"),
+    FAILED(4, "Failed");
 
     private Integer codigo;
     private String descricao;
