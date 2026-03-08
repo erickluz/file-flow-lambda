@@ -3,9 +3,8 @@ package org.erick.domain;
 public enum DocumentStatus {
     READY_FOR_UPLOAD(0, "Ready for upload"),
     UPLOADED(1, "Uploaded"),
-    PROCESSING(2, "Processing"),
-    DONE(3, "Done"),
-    FAILED(4, "Failed");
+    DONE(2, "Done"),
+    FAILED(3, "Failed");
 
     private Integer codigo;
     private String descricao;

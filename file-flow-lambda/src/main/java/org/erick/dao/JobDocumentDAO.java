@@ -28,6 +28,7 @@ public class JobDocumentDAO {
         ResultSet rs = ps.executeQuery();
 
         if (!rs.next()) return null;
+        
         LocalDateTime lCreatedAt = null;
         Timestamp createdAt = rs.getTimestamp("CREATED_AT");
         if (createdAt != null) {
@@ -65,11 +66,11 @@ public class JobDocumentDAO {
         PreparedStatement ps;
         try {
             ps = sqlConnection.prepareStatement(sql);
-            ps.setInt(1, DocumentStatus.UPLOADED.getCodigo());
+            ps.setInt(1, DocumentStatus.DONE.getCodigo());
             ps.setLong(2, contentLength);
             ps.setString(3, contetType);
             ps.setString(4, eTag);
-            ps.setLong(5, jobDocumento.id());
+            ps.setLong(5, jobDocumento.getId());
             ps.executeUpdate();
         } catch (SQLException e) {
             throw new RuntimeException("Error updating document: " + e.getMessage());
@@ -95,18 +96,23 @@ public class JobDocumentDAO {
         }
     }
 
-    public void alteraStatusJob(Long idJob) throws SQLException {
-        String sql = """
-            update jobs
-            set status = ?, updated_at = now()
-            where job_id = ?
-            """;
+    public Integer contarDocumentosPorJobEStatus(Long idJob, DocumentStatus done) {
+        String sql = "SELECT COUNT(*) FROM job_document WHERE job_id = ? AND status = ?";
 
-        PreparedStatement ps = sqlConnection.prepareStatement(sql);   
-        ps.setInt(1, DocumentStatus.PROCESSING.getCodigo());
-        ps.setLong(2, idJob);             
-        
+        PreparedStatement ps;
+        try {
+            ps = sqlConnection.prepareStatement(sql);
+            ps.setLong(1, idJob);
+            ps.setInt(2, done.getCodigo());
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getInt(1);
+            } else {
+                return 0;
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Error counting documents: " + e.getMessage());
+        }
     }
-
 
 }

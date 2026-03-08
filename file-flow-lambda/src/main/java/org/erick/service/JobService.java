@@ -7,9 +7,13 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
+import org.erick.dao.JobDAO;
+import org.erick.dao.JobDao;
 import org.erick.dao.JobDocumentDAO;
 import org.erick.domain.DocumentStatus;
+import org.erick.domain.Job;
 import org.erick.domain.JobDocument;
+import org.erick.domain.JobStatus;
 import org.erick.dto.S3EventEnvelope;
 
 import com.amazonaws.services.lambda.runtime.LambdaLogger;
@@ -33,16 +37,18 @@ public class JobService {
     private String bucket = System.getenv("S3_BUCKET");
 
     private JobDocumentDAO jobDocumentDAO;
+    private JobDAO jobDAO;
 
-    public JobService(JobDocumentDAO jobDocumentDAO) throws SQLException {
+    public JobService(JobDocumentDAO jobDocumentDAO, JobDAO jobDAO) throws SQLException {
         this.jobDocumentDAO = jobDocumentDAO;
+        this.jobDAO = jobDAO;
     }
     
     public void verificarArquivoS3(HeadObjectResponse arquivoS3, JobDocument jobDocumento) {
         if (arquivoS3 == null) {
             throw new RuntimeException("Arquivo não encontrado no S3: ");
         }
-        if (!arquivoS3.contentType().equals(jobDocumento.contentType())) {
+        if (!arquivoS3.contentType().equals(jobDocumento.getContentType())) {
             throw new RuntimeException("Tipo de conteúdo inválido para o arquivo no S3: ");
         }
         if (arquivoS3.contentLength() > TAMANHO_MAXIMO) {
@@ -54,20 +60,17 @@ public class JobService {
         if (jobDocumento == null) {
             throw new RuntimeException("Documento não encontrado");
         }
-        if (jobDocumento.status() == DocumentStatus.DONE) {
+        if (jobDocumento.getStatus() == DocumentStatus.DONE) {
             throw new RuntimeException("Documento já processado");
         }
-        if (jobDocumento.status() == DocumentStatus.PROCESSING) {
-            throw new RuntimeException("Documento em processamento");
-        }
-        if (jobDocumento.status() == DocumentStatus.FAILED) {
+        if (jobDocumento.getStatus() == DocumentStatus.FAILED) {
             throw new RuntimeException("Documento com falha no processamento");
         }
     }
 
     public void atualizarDocumentoComFalha(JobDocument jobDocumento, String errorMessage) {
         if (jobDocumento != null) {
-            jobDocumentDAO.atualizarDocumentoComFalha(jobDocumento.id(), errorMessage);
+            jobDocumentDAO.atualizarDocumentoComFalha(jobDocumento.getId(), errorMessage);
         }
     }
 
@@ -168,16 +171,25 @@ public class JobService {
         jobDocumentDAO.atualizarDocumento(jobDocumento, contentLength, contentType, eTag, sizeBytes);
     }
 
-    public void alteraStatusJob(Long idJob) {
-        try {
-            jobDocumentDAO.alteraStatusJob(idJob);
-        } catch (Exception e) {
-            throw new RuntimeException("Error updating job status: " + e.getMessage());
+    public void alteraStatusJob(Long idJob) throws Exception {
+        Job job = jobDAO.obterJobPorId(idJob);
+        if (job == null) {
+            throw new RuntimeException("Job não encontrado: " + idJob);
         }
+        JobStatus jobStatus;
+        Integer quantidadeDocJob = job.getTotalDocuments();
+        Integer quantidadeDocProcessados = jobDocumentDAO.contarDocumentosPorJobEStatus(idJob, DocumentStatus.DONE);
+        if (quantidadeDocProcessados == quantidadeDocJob) {
+            jobStatus = JobStatus.DONE;
+        } else {
+            jobStatus = JobStatus.COLLECTING;
+        }
+        jobDAO.atualizarStatusJob(idJob, jobStatus);
     }
 
     public void criarArquivoResultadoS3(Long jobId, String bucket, JobDocument jobDocumento) {
-        putJson("processed/" + jobId + "/" + jobDocumento.id() + "result.json", arquivoResultadoJson(jobId, bucket, jobDocumento));
+        jobDocumento.setUpdatedAt(LocalDateTime.now());
+        putJson("processed/" + jobId + "/" + jobDocumento.getId() + "/" + "result.json", arquivoResultadoJson(jobId, bucket, jobDocumento));
     }
 
     private String arquivoResultadoJson(Long jobId, String bucket, JobDocument jobDocumento) {
@@ -202,14 +214,14 @@ public class JobService {
             }
             """.formatted(
             jobId,
-            jobDocumento.id(),
+            jobDocumento.getId(),
             bucket,
-            jobDocumento.rawKey(),
-            jobDocumento.originalFilename(),
-            jobDocumento.contentType(),
-            jobDocumento.sizeBytes(),
-            jobDocumento.eTag(),
-            jobDocumento.updatedAt().format(DateTimeFormatter.ISO_DATE_TIME),
+            jobDocumento.getRawKey(),
+            jobDocumento.getOriginalFilename(),
+            jobDocumento.getContentType(),
+            jobDocumento.getSizeBytes(),
+            jobDocumento.getETag(),
+            jobDocumento.getUpdatedAt().format(DateTimeFormatter.ISO_DATE_TIME),
             LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME),
             "DONE"
         );

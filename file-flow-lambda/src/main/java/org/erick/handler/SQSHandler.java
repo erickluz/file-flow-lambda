@@ -11,6 +11,7 @@ import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 
 import java.sql.SQLException;
 
+import org.erick.dao.JobDAO;
 import org.erick.dao.JobDocumentDAO;
 import org.erick.domain.JobDocument;
 
@@ -24,7 +25,7 @@ public class SQSHandler implements RequestHandler<SQSEvent, Void> {
         LambdaLogger logger = context.getLogger();
         JobDocument jobDocumento = null;
         try {
-            jobService = new JobService(new JobDocumentDAO());
+            jobService = new JobService(new JobDocumentDAO(), new JobDAO());
             for(var s3Envelope : jobService.obterEventos(event, logger)) {
                 for (var record : s3Envelope.Records()) {
 
@@ -55,7 +56,8 @@ public class SQSHandler implements RequestHandler<SQSEvent, Void> {
         } catch (SQLException e) {
             logger.log("Erro de SQL: " + e.getMessage() + "\n");
         } catch (Throwable e) {
-            logger.log("Erro ao processar lambda: " + e.getStackTrace() + "\n");
+            logger.log("Erro ao processar lambda: " + e.getMessage() + "\n");
+            e.printStackTrace();
             jobService.atualizarDocumentoComFalha(jobDocumento, e.getMessage());
         }
         
