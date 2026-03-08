@@ -8,7 +8,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 import org.erick.dao.JobDAO;
-import org.erick.dao.JobDao;
 import org.erick.dao.JobDocumentDAO;
 import org.erick.domain.DocumentStatus;
 import org.erick.domain.Job;
